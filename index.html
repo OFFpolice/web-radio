@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>WebRadioBot</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Nunito', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #121212;
+            color: #ffffff;
+            line-height: 1.5;
+            -webkit-tap-highlight-color: transparent;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .app {
+            max-width: 500px;
+            margin: 0 auto;
+            height: 100vh;
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            background: #121212;
+            position: relative;
+        }
+        .app-header {
+            padding-top: calc(var(--tg-content-safe-area-inset-top, 0px) + 0px);
+            padding-left: calc(var(--tg-content-safe-area-inset-left, 0px) + 16px);
+            padding-right: calc(var(--tg-content-safe-area-inset-right, 0px) + 16px);
+            padding-bottom: 8px;
+            background: #1e1e1e;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            text-align: center;
+            flex-shrink: 0;
+        }
+        .app-header h1 {
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #c2185b, #e91e63);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            display: inline-block;
+            margin-bottom: 8px;
+        }
+        .search-wrapper {
+            margin: 8px 0 4px;
+            background: #2c2c2c;
+            border-radius: 28px;
+            padding: 4px 8px 4px 16px;
+            display: flex;
+            align-items: center;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        .search-wrapper i { color: #9e9e9e; margin-right: 8px; }
+        .search-wrapper input {
+            background: transparent;
+            border: none;
+            outline: none;
+            color: #fff;
+            font-size: 16px;
+            font-family: 'Nunito', sans-serif;
+            width: 100%;
+            padding: 12px 0;
+        }
+        .search-wrapper input::placeholder { color: #9e9e9e; }
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px 12px 12px;
+            scroll-behavior: smooth;
+        }
+        .stations-section { margin-bottom: 8px; }
+        .section-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px;
+            font-weight: 600;
+            color: #e0e0e0;
+            font-size: 15px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .section-title i { color: #c2185b; font-size: 20px; }
+        .station-card {
+            display: flex;
+            align-items: flex-start;
+            padding: 14px 16px;
+            background: #1e1e1e;
+            border-radius: 16px;
+            margin-bottom: 8px;
+            border: 1px solid rgba(255,255,255,0.03);
+            transition: background 0.2s, transform 0.1s;
+            cursor: pointer;
+        }
+        .station-card:active { background: #2c2c2c; transform: scale(0.99); }
+        .station-card.active {
+            background: rgba(194, 24, 91, 0.15);
+            border-left: 4px solid #c2185b;
+            border-radius: 16px 8px 8px 16px;
+        }
+        .station-icon {
+            width: 48px; height: 48px; border-radius: 12px;
+            background: #2c2c2c;
+            display: flex; align-items: center; justify-content: center;
+            margin-right: 16px; flex-shrink: 0;
+        }
+        .station-icon i { font-size: 28px; color: #c2185b; }
+        .station-info { flex: 1; min-width: 0; }
+        .station-name {
+            font-weight: 600; font-size: 16px; color: #ffffff;
+            margin-bottom: 4px; line-height: 1.3;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .station-tags { display: flex; flex-wrap: wrap; gap: 6px; color: #b0b0b0; font-size: 12px; }
+        .tag {
+            background: #2c2c2c; color: #b0b0b0; font-size: 11px;
+            padding: 2px 8px; border-radius: 12px; font-weight: 500; white-space: nowrap;
+        }
+        .station-card.active .tag { background: #3a2a33; color: #e0b0c0; }
+        .favorite-btn {
+            background: transparent; border: none; color: #9e9e9e;
+            width: 36px; height: 36px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: all 0.15s;
+            margin-left: 8px; flex-shrink: 0; align-self: flex-start;
+        }
+        .favorite-btn i { font-size: 22px; }
+        .favorite-btn.active { color: #e91e63; }
+        .favorite-btn:active { background: rgba(255,255,255,0.08); transform: scale(0.9); }
+        .loading-placeholder { padding: 24px; text-align: center; color: #9e9e9e; }
+
+        /* ——— PLAYER BAR ——— */
+        .player-bar {
+            padding: 8px 12px;
+            background: #1e1e1e;
+            border-top: 1px solid rgba(255,255,255,0.08);
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .play-btn {
+            width: 40px; height: 40px; border-radius: 20px;
+            background: #c2185b; border: none; color: white;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: 0.2s;
+            box-shadow: 0 4px 8px rgba(194,24,91,0.3); flex-shrink: 0;
+        }
+        .play-btn i { font-size: 24px; }
+        .play-btn:active { transform: scale(0.92); box-shadow: 0 2px 4px rgba(194,24,91,0.4); }
+        .now-playing-text {
+            flex: 1; font-weight: 600; font-size: 14px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #fff;
+        }
+        .status-badge {
+            display: flex; align-items: center; gap: 4px;
+            color: #b0b0b0; font-size: 12px; flex-shrink: 0;
+        }
+        .status-badge i { font-size: 16px; }
+
+        /* ——— BOTTOM NAV ——— */
+        .bottom-nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            background: #1a1a1a;
+            padding: 6px 8px calc(var(--tg-content-safe-area-inset-bottom, 0px) + 6px);
+            border-top: 1px solid rgba(255,255,255,0.05);
+            flex-shrink: 0;
+        }
+        .nav-item {
+            background: none; border: none; color: #888;
+            display: flex; flex-direction: column; align-items: center;
+            gap: 2px; font-family: 'Nunito', sans-serif;
+            font-size: 11px; font-weight: 500; cursor: pointer;
+            padding: 6px 12px; border-radius: 30px;
+            transition: all 0.15s; flex: 1; max-width: 100px;
+        }
+        .nav-item i { font-size: 22px; }
+        .nav-item.active { color: #e91e63; background: rgba(233, 30, 99, 0.1); }
+
+        /* ——— EQ NAV ITEM ——— */
+        .nav-item-eq {
+            background: none; border: none; color: #888;
+            display: flex; flex-direction: column; align-items: center;
+            gap: 2px; font-family: 'Nunito', sans-serif;
+            font-size: 11px; font-weight: 500; cursor: pointer;
+            padding: 6px 12px; border-radius: 30px;
+            transition: all 0.15s; flex: 1; max-width: 100px;
+        }
+        .nav-item-eq.active { color: #e91e63; background: rgba(233, 30, 99, 0.1); }
+        .nav-item-eq span { font-size: 11px; font-weight: 500; }
+
+        /* ——— EQ BARS ICON ——— */
+        .eq-icon {
+            width: 22px; height: 22px;
+            display: flex; align-items: flex-end; justify-content: center;
+            gap: 2px;
+        }
+        .eq-bar {
+            width: 4px; border-radius: 2px;
+            background: currentColor;
+            transition: height 0.1s ease;
+        }
+        /* Idle state heights */
+        .eq-bar-1 { height: 8px; }
+        .eq-bar-2 { height: 14px; }
+        .eq-bar-3 { height: 10px; }
+        .eq-bar-4 { height: 18px; }
+
+        /* Animated when playing */
+        .eq-icon.playing .eq-bar-1 { animation: eq-anim1 0.6s ease-in-out infinite alternate; }
+        .eq-icon.playing .eq-bar-2 { animation: eq-anim2 0.5s ease-in-out infinite alternate; }
+        .eq-icon.playing .eq-bar-3 { animation: eq-anim3 0.7s ease-in-out infinite alternate; }
+        .eq-icon.playing .eq-bar-4 { animation: eq-anim4 0.45s ease-in-out infinite alternate; }
+
+        @keyframes eq-anim1 { from { height: 4px; } to { height: 18px; } }
+        @keyframes eq-anim2 { from { height: 10px; } to { height: 22px; } }
+        @keyframes eq-anim3 { from { height: 6px; } to { height: 16px; } }
+        @keyframes eq-anim4 { from { height: 14px; } to { height: 8px; } }
+
+        /* ——— EQ PANEL ——— */
+        .eq-panel {
+            background: #181818;
+            border-radius: 24px 24px 0 0;
+            padding: 20px 20px 12px;
+            border-top: 1px solid rgba(255,255,255,0.07);
+        }
+        .eq-panel-title {
+            font-size: 13px; font-weight: 700; color: #e0e0e0;
+            text-transform: uppercase; letter-spacing: 1px;
+            margin-bottom: 16px; text-align: center;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .eq-panel-title span { color: #e91e63; }
+        .eq-presets {
+            display: flex; gap: 6px; overflow-x: auto;
+            padding-bottom: 4px; margin-bottom: 16px;
+            scrollbar-width: none;
+        }
+        .eq-presets::-webkit-scrollbar { display: none; }
+        .eq-preset-btn {
+            background: #2c2c2c; border: 1px solid rgba(255,255,255,0.08);
+            color: #bbb; border-radius: 20px; padding: 5px 14px;
+            font-size: 12px; font-weight: 600; font-family: 'Nunito', sans-serif;
+            cursor: pointer; white-space: nowrap; transition: all 0.15s; flex-shrink: 0;
+        }
+        .eq-preset-btn.active {
+            background: rgba(194,24,91,0.2);
+            border-color: #c2185b;
+            color: #e91e63;
+        }
+        .eq-sliders {
+            display: flex; gap: 0; align-items: flex-end;
+            justify-content: space-between;
+            height: 120px; padding: 0 4px;
+        }
+        .eq-band {
+            display: flex; flex-direction: column;
+            align-items: center; gap: 6px; flex: 1;
+        }
+        .eq-band-value {
+            font-size: 10px; color: #888; font-weight: 600;
+            min-height: 14px; text-align: center;
+        }
+        .eq-slider-track {
+            position: relative; width: 28px; flex: 1;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .eq-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            writing-mode: vertical-lr;
+            direction: rtl;
+            width: 80px;
+            height: 28px;
+            background: transparent;
+            cursor: pointer;
+            transform: rotate(0deg);
+            outline: none;
+        }
+        /* Vertical slider via transform trick */
+        .eq-slider-wrap {
+            position: relative;
+            width: 28px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .eq-slider-wrap input[type=range] {
+            -webkit-appearance: none;
+            appearance: none;
+            position: absolute;
+            width: 80px;
+            height: 4px;
+            background: transparent;
+            cursor: pointer;
+            transform: rotate(-90deg);
+            outline: none;
+            margin: 0;
+            padding: 0;
+        }
+        .eq-slider-wrap input[type=range]::-webkit-slider-runnable-track {
+            height: 4px;
+            border-radius: 2px;
+            background: linear-gradient(to right, #c2185b var(--pct, 50%), #333 var(--pct, 50%));
+        }
+        .eq-slider-wrap input[type=range]::-moz-range-track {
+            height: 4px; border-radius: 2px; background: #333;
+        }
+        .eq-slider-wrap input[type=range]::-moz-range-progress {
+            height: 4px; border-radius: 2px; background: #c2185b;
+        }
+        .eq-slider-wrap input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px; height: 16px;
+            border-radius: 50%;
+            background: #e91e63;
+            box-shadow: 0 0 6px rgba(233,30,99,0.5);
+            margin-top: -6px;
+            transition: transform 0.1s;
+        }
+        .eq-slider-wrap input[type=range]:active::-webkit-slider-thumb {
+            transform: scale(1.3);
+        }
+        .eq-slider-wrap input[type=range]::-moz-range-thumb {
+            width: 16px; height: 16px; border-radius: 50%;
+            background: #e91e63; border: none;
+            box-shadow: 0 0 6px rgba(233,30,99,0.5);
+        }
+        .eq-band-label {
+            font-size: 10px; color: #666; font-weight: 700;
+            text-align: center; letter-spacing: 0.3px;
+        }
+        .eq-center-line {
+            position: absolute;
+            left: 0; right: 0;
+            top: 50%; height: 1px;
+            background: rgba(255,255,255,0.06);
+            pointer-events: none;
+        }
+
+        /* About */
+        .about-container { padding: 24px 16px; text-align: center; }
+        .about-icon { font-size: 64px; color: #c2185b; margin-bottom: 16px; }
+        .about-title { font-size: 22px; font-weight: 700; margin-bottom: 12px; }
+        .about-text { color: #ccc; margin-bottom: 20px; }
+
+        .content::-webkit-scrollbar { width: 4px; }
+        .content::-webkit-scrollbar-thumb { background: #c2185b; border-radius: 4px; }
+
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .scroll-to-top {
+            position: fixed;
+            bottom: calc(130px + var(--tg-content-safe-area-inset-bottom, 0px));
+            right: max(20px, calc(20px + var(--tg-content-safe-area-inset-right, 0px)));
+            width: 48px; height: 48px; border-radius: 24px;
+            background: #c2185b; color: white; border: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; opacity: 0; visibility: hidden;
+            transition: opacity 0.2s, visibility 0.2s, transform 0.2s;
+            z-index: 30;
+        }
+        .scroll-to-top.visible { opacity: 1; visibility: visible; }
+        .scroll-to-top i { font-size: 28px; }
+        .scroll-to-top:active { transform: scale(0.9); background: #ad1457; }
+    </style>
+</head>
+<body>
+
+<div class="app" id="app">
+    <header class="app-header" id="appHeader">
+        <h1>WebRadioBot</h1>
+        <div class="search-wrapper" id="searchWrapper">
+            <i class="material-icons">search</i>
+            <input type="text" id="searchInput" placeholder="Поиск станций..." autocomplete="off">
+        </div>
+    </header>
+
+    <div class="content" id="dynamicContent"></div>
+
+    <div class="player-bar" id="playerBar">
+        <button class="play-btn" id="playBtn">
+            <i class="material-icons">play_arrow</i>
+        </button>
+        <span class="now-playing-text" id="currentStationName">Выберите станцию</span>
+        <div class="status-badge" id="statusArea">
+            <i class="material-icons" id="statusIcon">circle</i>
+            <span id="statusText">Ожидание</span>
+        </div>
+    </div>
+
+    <div class="bottom-nav" id="bottomNav">
+        <button class="nav-item active" data-tab="radio" id="navRadio">
+            <i class="material-icons">radio</i>
+            <span>Радио</span>
+        </button>
+        <button class="nav-item" data-tab="favorites" id="navFavorites">
+            <i class="material-icons">favorite</i>
+            <span>Избранное</span>
+        </button>
+        <!-- EQ NAV BUTTON -->
+        <button class="nav-item-eq" data-tab="eq" id="navEq">
+            <div class="eq-icon" id="navEqIcon">
+                <div class="eq-bar eq-bar-1"></div>
+                <div class="eq-bar eq-bar-2"></div>
+                <div class="eq-bar eq-bar-3"></div>
+                <div class="eq-bar eq-bar-4"></div>
+            </div>
+            <span>Эквалайзер</span>
+        </button>
+        <button class="nav-item" data-tab="about" id="navAbout">
+            <i class="material-icons">info</i>
+            <span>О нас</span>
+        </button>
+    </div>
+</div>
+
+<button class="scroll-to-top" id="scrollToTopBtn" title="Наверх">
+    <i class="material-icons">arrow_upward</i>
+</button>
+
+<audio id="audioPlayer"></audio>
+
+<script>
+(function() {
+    "use strict";
+
+    const tg = window.Telegram?.WebApp;
+    if (tg) {
+        tg.ready(); tg.expand();
+        if (tg.isVersionAtLeast("8.0")) tg.requestFullscreen();
+        tg.enableClosingConfirmation();
+        tg.disableVerticalSwipes();
+        tg.lockOrientation();
+    }
+
+    const audio = document.getElementById('audioPlayer');
+    const playBtn = document.getElementById('playBtn');
+    const statusText = document.getElementById('statusText');
+    const statusIcon = document.getElementById('statusIcon');
+    const currentStationNameEl = document.getElementById('currentStationName');
+    const searchInput = document.getElementById('searchInput');
+    const searchWrapper = document.getElementById('searchWrapper');
+    const dynamicContent = document.getElementById('dynamicContent');
+    const scrollToTopBtn = document.getElementById('scrollToTopBtn');
+    const navEqIcon = document.getElementById('navEqIcon');
+
+    const navRadio = document.getElementById('navRadio');
+    const navFavorites = document.getElementById('navFavorites');
+    const navEq = document.getElementById('navEq');
+    const navAbout = document.getElementById('navAbout');
+    const navItems = [navRadio, navFavorites, navAbout];
+    const allNavItems = [navRadio, navFavorites, navEq, navAbout];
+
+    let stations = [], selectedStation = null;
+    let currentServer = 'https://de1.api.radio-browser.info';
+    let isLoading = false, hasMore = true, currentOffset = 0;
+    const LIMIT = 100;
+    let currentSearchQuery = '';
+    let activeTab = 'radio';
+    let favorites = [];
+
+    audio.volume = 1.0;
+
+    // ——— AudioContext & EQ ———
+    let audioCtx = null;
+    let sourceNode = null;
+    let filters = [];
+    let eqConnected = false;
+
+    const EQ_BANDS = [
+        { freq: 60,   label: '60Hz'  },
+        { freq: 170,  label: '170Hz' },
+        { freq: 350,  label: '350Hz' },
+        { freq: 1000, label: '1kHz'  },
+        { freq: 3500, label: '3.5kHz'},
+        { freq: 10000,label: '10kHz' },
+        { freq: 16000,label: '16kHz' },
+    ];
+
+    const EQ_PRESETS = {
+        'Норма':     [0, 0, 0, 0, 0, 0, 0],
+        'Поп':       [1, 3, 5, 4, 1, -1, -2],
+        'Рок':       [4, 3, -1, -2, 2, 5, 6],
+        'Джаз':      [3, 2, 0, 2, 3, 4, 3],
+        'Классика':  [5, 4, 3, 2, -1, -2, -2],
+        'Бас':       [8, 6, 4, 0, -1, -2, -3],
+        'Вокал':     [-2, -1, 3, 6, 5, 2, -1],
+        'Электро':   [5, 3, 0, -2, 2, 5, 5],
+    };
+
+    let eqGains = [0, 0, 0, 0, 0, 0, 0];
+    let activePreset = 'Норма';
+
+    function initAudioContext() {
+        if (audioCtx) return;
+        try {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            sourceNode = audioCtx.createMediaElementSource(audio);
+
+            filters = EQ_BANDS.map((band, i) => {
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = i === 0 ? 'lowshelf' : i === EQ_BANDS.length - 1 ? 'highshelf' : 'peaking';
+                filter.frequency.value = band.freq;
+                filter.gain.value = eqGains[i];
+                filter.Q.value = 1.0;
+                return filter;
+            });
+
+            // Chain: source → f0 → f1 → … → fN → destination
+            sourceNode.connect(filters[0]);
+            for (let i = 0; i < filters.length - 1; i++) {
+                filters[i].connect(filters[i + 1]);
+            }
+            filters[filters.length - 1].connect(audioCtx.destination);
+            eqConnected = true;
+        } catch(e) {
+            console.warn('AudioContext failed:', e);
+        }
+    }
+
+    function applyEqGains() {
+        if (!eqConnected) return;
+        filters.forEach((f, i) => {
+            f.gain.setTargetAtTime(eqGains[i], audioCtx.currentTime, 0.01);
+        });
+    }
+
+    function loadEqFromStorage() {
+        try {
+            const stored = localStorage.getItem('webradio_eq');
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                eqGains = parsed.gains || eqGains;
+                activePreset = parsed.preset || 'Норма';
+            }
+        } catch(e) {}
+    }
+
+    function saveEqToStorage() {
+        localStorage.setItem('webradio_eq', JSON.stringify({ gains: eqGains, preset: activePreset }));
+    }
+
+    // ——— EQ Panel render ———
+    function renderEq() {
+        let presetsHtml = Object.keys(EQ_PRESETS).map(name =>
+            `<button class="eq-preset-btn ${activePreset === name ? 'active' : ''}" data-preset="${name}">${name}</button>`
+        ).join('');
+
+        let slidersHtml = EQ_BANDS.map((band, i) => {
+            const val = eqGains[i];
+            const pct = ((val + 12) / 24 * 100).toFixed(1);
+            const label = val > 0 ? `+${val}` : `${val}`;
+            return `
+                <div class="eq-band">
+                    <div class="eq-band-value" id="eq-val-${i}">${label} дБ</div>
+                    <div class="eq-slider-wrap">
+                        <div class="eq-center-line"></div>
+                        <input type="range" id="eq-slider-${i}"
+                            min="-12" max="12" step="0.5"
+                            value="${val}"
+                            style="--pct: ${pct}%"
+                            data-band="${i}">
+                    </div>
+                    <div class="eq-band-label">${band.label}</div>
+                </div>
+            `;
+        }).join('');
+
+        dynamicContent.innerHTML = `
+            <div class="eq-panel">
+                <div class="eq-panel-title">
+                    <span>⚙</span> Эквалайзер
+                </div>
+                <div class="eq-presets" id="eqPresets">${presetsHtml}</div>
+                <div class="eq-sliders">${slidersHtml}</div>
+            </div>
+        `;
+
+        // Preset buttons
+        document.querySelectorAll('.eq-preset-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const preset = btn.dataset.preset;
+                activePreset = preset;
+                eqGains = [...EQ_PRESETS[preset]];
+                applyEqGains();
+                saveEqToStorage();
+                renderEq();
+            });
+        });
+
+        // Sliders
+        EQ_BANDS.forEach((_, i) => {
+            const slider = document.getElementById(`eq-slider-${i}`);
+            const valEl = document.getElementById(`eq-val-${i}`);
+            if (!slider) return;
+
+            const updateTrack = () => {
+                const pct = ((slider.value - slider.min) / (slider.max - slider.min) * 100).toFixed(1);
+                slider.style.setProperty('--pct', pct + '%');
+            };
+
+            slider.addEventListener('input', () => {
+                const v = parseFloat(slider.value);
+                eqGains[i] = v;
+                valEl.textContent = (v > 0 ? `+${v}` : `${v}`) + ' дБ';
+                activePreset = 'Custom';
+                updateTrack();
+                if (!eqConnected && audio.src) initAudioContext();
+                applyEqGains();
+                saveEqToStorage();
+                // deactivate preset buttons
+                document.querySelectorAll('.eq-preset-btn').forEach(b => b.classList.remove('active'));
+            });
+            updateTrack();
+        });
+    }
+
+    // ——— Nav EQ icon animation ———
+    function updateEqIconState(isPlaying) {
+        if (isPlaying) {
+            navEqIcon.classList.add('playing');
+        } else {
+            navEqIcon.classList.remove('playing');
+        }
+    }
+
+    // ——— Telegram Back Button ———
+    const backButton = tg?.BackButton;
+    if (backButton) {
+        backButton.onClick(() => { if (activeTab !== 'radio') switchTab('radio'); });
+    }
+
+    // ——— Favorites ———
+    function loadFavoritesFromStorage() {
+        try {
+            const stored = localStorage.getItem('webradio_favorites');
+            favorites = stored ? JSON.parse(stored) : [];
+        } catch(e) { favorites = []; }
+    }
+    function saveFavoritesToStorage() {
+        localStorage.setItem('webradio_favorites', JSON.stringify(favorites));
+    }
+    function isFavorite(station) {
+        if (!station?.url_resolved) return false;
+        return favorites.some(f => f.url_resolved === station.url_resolved);
+    }
+    function toggleFavorite(station) {
+        if (!station?.url_resolved) return;
+        const idx = favorites.findIndex(f => f.url_resolved === station.url_resolved);
+        if (idx === -1) {
+            favorites.push({ name: station.name, url_resolved: station.url_resolved, tags: station.tags||'', favicon: station.favicon||'' });
+        } else {
+            favorites.splice(idx, 1);
+        }
+        saveFavoritesToStorage();
+        if (activeTab === 'favorites') renderFavorites();
+        else if (activeTab === 'radio') renderRadioList();
+    }
+
+    function setStatus(text, icon='circle', spin=false) {
+        statusText.textContent = text;
+        statusIcon.textContent = icon;
+        statusIcon.style.animation = spin ? 'spin 1s linear infinite' : '';
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        return String(text).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function renderRadioList() {
+        if (!stations.length && !isLoading) {
+            dynamicContent.innerHTML = `<div class="loading-placeholder"><i class="material-icons">search_off</i> Ничего не найдено</div>`;
+            return;
+        }
+        let html = `<div class="stations-section"><div class="section-title"><i class="material-icons">radio</i><span>Все радиостанции</span></div><div id="stationsList">`;
+        stations.forEach(station => {
+            const isActive = selectedStation?.url_resolved === station.url_resolved;
+            const favActive = isFavorite(station);
+            const tags = station.tags ? station.tags.split(',').slice(0,3).map(t=>t.trim()) : [];
+            const tagHtml = tags.length ? tags.map(t=>`<span class="tag">${escapeHtml(t)}</span>`).join('') : '<span class="tag">radio</span>';
+            html += `
+                <div class="station-card ${isActive?'active':''}" data-url="${station.url_resolved}" data-name="${escapeHtml(station.name)}">
+                    <div class="station-icon"><i class="material-icons">radio</i></div>
+                    <div class="station-info">
+                        <div class="station-name">${escapeHtml(station.name)||'Без названия'}</div>
+                        <div class="station-tags">${tagHtml}</div>
+                    </div>
+                    <button class="favorite-btn ${favActive?'active':''}" data-url="${station.url_resolved}" data-name="${escapeHtml(station.name)}" data-tags="${escapeHtml(station.tags||'')}">
+                        <i class="material-icons">${favActive?'favorite':'favorite_border'}</i>
+                    </button>
+                </div>`;
+        });
+        if (hasMore) html += `<div id="load-more-indicator" class="loading-placeholder"><i class="material-icons">sync</i> Загрузка...</div>`;
+        html += `</div></div>`;
+        dynamicContent.innerHTML = html;
+
+        document.querySelectorAll('.station-card').forEach(card => {
+            card.addEventListener('click', e => {
+                if (e.target.closest('.favorite-btn')) return;
+                selectStation(card.dataset.url, card.dataset.name);
+            });
+        });
+        document.querySelectorAll('.favorite-btn').forEach(btn => {
+            btn.addEventListener('click', e => {
+                e.stopPropagation();
+                const station = stations.find(s=>s.url_resolved===btn.dataset.url) || { url_resolved: btn.dataset.url, name: btn.dataset.name, tags: btn.dataset.tags };
+                toggleFavorite(station);
+                const fav = isFavorite(station);
+                btn.innerHTML = `<i class="material-icons">${fav?'favorite':'favorite_border'}</i>`;
+                btn.classList.toggle('active', fav);
+            });
+        });
+    }
+
+    function renderFavorites() {
+        if (!favorites.length) {
+            dynamicContent.innerHTML = `<div class="loading-placeholder" style="margin-top:40px;"><i class="material-icons">favorite_border</i><br>Нет избранных станций</div>`;
+            return;
+        }
+        let html = `<div class="stations-section"><div class="section-title"><i class="material-icons">favorite</i><span>Избранное</span></div><div id="favoritesList">`;
+        favorites.forEach(station => {
+            const isActive = selectedStation?.url_resolved === station.url_resolved;
+            const tags = station.tags ? station.tags.split(',').slice(0,3).map(t=>t.trim()) : [];
+            const tagHtml = tags.length ? tags.map(t=>`<span class="tag">${escapeHtml(t)}</span>`).join('') : '<span class="tag">radio</span>';
+            html += `
+                <div class="station-card ${isActive?'active':''}" data-url="${station.url_resolved}" data-name="${escapeHtml(station.name)}">
+                    <div class="station-icon"><i class="material-icons">radio</i></div>
+                    <div class="station-info">
+                        <div class="station-name">${escapeHtml(station.name)||'Без названия'}</div>
+                        <div class="station-tags">${tagHtml}</div>
+                    </div>
+                    <button class="favorite-btn active" data-url="${station.url_resolved}" data-name="${escapeHtml(station.name)}" data-tags="${escapeHtml(station.tags||'')}">
+                        <i class="material-icons">favorite</i>
+                    </button>
+                </div>`;
+        });
+        html += `</div></div>`;
+        dynamicContent.innerHTML = html;
+        document.querySelectorAll('.station-card').forEach(card => {
+            card.addEventListener('click', e => {
+                if (e.target.closest('.favorite-btn')) return;
+                selectStation(card.dataset.url, card.dataset.name);
+            });
+        });
+        document.querySelectorAll('.favorite-btn').forEach(btn => {
+            btn.addEventListener('click', e => {
+                e.stopPropagation();
+                toggleFavorite({ url_resolved: btn.dataset.url, name: btn.dataset.name, tags: btn.dataset.tags });
+                renderFavorites();
+            });
+        });
+    }
+
+    function renderAbout() {
+        dynamicContent.innerHTML = `
+            <div class="about-container">
+                <i class="material-icons about-icon">radio</i>
+                <div class="about-title">WebRadioBot</div>
+                <div class="about-text">Слушайте тысячи радиостанций со всего мира. Добавляйте любимые в избранное.</div>
+                <div class="about-text" style="font-size:13px;opacity:0.7;">Версия: 0.0.0.0.4 · Telegram Mini App</div>
+            </div>`;
+    }
+
+    function selectStation(url, name) {
+        if (!url) return;
+        selectedStation = { url_resolved: url, name };
+        currentStationNameEl.textContent = name || 'Неизвестная станция';
+        document.querySelectorAll('.station-card').forEach(c => {
+            c.classList.toggle('active', c.dataset.url === url);
+        });
+        localStorage.setItem('webradio_last_url', url);
+        localStorage.setItem('webradio_last_name', name);
+        const wasPlaying = !audio.paused;
+        if (wasPlaying) audio.pause();
+        audio.src = url;
+        audio.load();
+
+        // Init AudioContext on user gesture
+        if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+        if (!eqConnected) initAudioContext();
+
+        if (wasPlaying) {
+            audio.play().catch(() => setStatus('Ошибка воспроизведения', 'error'));
+        } else {
+            setStatus('Готово', 'check_circle');
+        }
+        updatePlayButton(false);
+    }
+
+    function updatePlayButton(playing) {
+        playBtn.innerHTML = playing ? '<i class="material-icons">pause</i>' : '<i class="material-icons">play_arrow</i>';
+        updateEqIconState(playing);
+    }
+
+    async function fetchStations(reset=false, query='') {
+        if (isLoading) return;
+        if (!hasMore && !reset) return;
+        isLoading = true;
+        if (reset) {
+            currentOffset = 0; hasMore = true; stations = [];
+            setStatus('Загрузка...', 'sync', true);
+        } else {
+            const indicator = document.getElementById('load-more-indicator');
+            if (!indicator) {
+                const list = document.getElementById('stationsList');
+                if (list) {
+                    const loader = document.createElement('div');
+                    loader.id = 'load-more-indicator';
+                    loader.className = 'loading-placeholder';
+                    loader.innerHTML = '<i class="material-icons">sync</i> Загрузка...';
+                    list.appendChild(loader);
+                }
+            }
+        }
+        try {
+            const serverRes = await fetch('https://all.api.radio-browser.info/json/servers');
+            const servers = await serverRes.json();
+            const randomServer = servers[Math.floor(Math.random() * servers.length)];
+            currentServer = `https://${randomServer.name}`;
+            let url;
+            if (query.trim()) {
+                url = `${currentServer}/json/stations/search?name=${encodeURIComponent(query)}&limit=${LIMIT}&offset=${currentOffset}`;
+            } else {
+                url = `${currentServer}/json/stations/search?limit=${LIMIT}&offset=${currentOffset}&order=votes&reverse=true`;
+            }
+            const res = await fetch(url);
+            const data = await res.json();
+            const valid = data.filter(s => s.url_resolved && s.name);
+            stations = reset ? valid : [...stations, ...valid];
+            currentOffset += valid.length;
+            hasMore = valid.length === LIMIT;
+            if (activeTab === 'radio') renderRadioList();
+            if (reset && stations.length) {
+                const savedUrl = localStorage.getItem('webradio_last_url');
+                const savedName = localStorage.getItem('webradio_last_name');
+                if (!savedUrl) {
+                    selectStation(stations[0].url_resolved, stations[0].name);
+                } else if (stations.some(s => s.url_resolved === savedUrl)) {
+                    selectStation(savedUrl, savedName || 'Станция');
+                }
+            }
+            setStatus(`Загружено: ${stations.length}`, 'check_circle');
+            if (!hasMore && stations.length) setStatus('Все станции загружены', 'done_all');
+        } catch(err) {
+            console.error(err);
+            if (reset) dynamicContent.innerHTML = `<div class="loading-placeholder">Ошибка загрузки</div>`;
+            setStatus('Ошибка сети', 'error');
+        } finally {
+            isLoading = false;
+            const loader = document.getElementById('load-more-indicator');
+            if (loader) loader.remove();
+        }
+    }
+
+    function switchTab(tabId) {
+        activeTab = tabId;
+        allNavItems.forEach(item => {
+            const isActive = item.dataset.tab === tabId;
+            item.classList.toggle('active', isActive);
+        });
+
+        if (tabId === 'radio') {
+            searchWrapper.style.display = 'flex';
+            if (!stations.length) fetchStations(true, currentSearchQuery);
+            else renderRadioList();
+        } else {
+            searchWrapper.style.display = 'none';
+            if (tabId === 'favorites') renderFavorites();
+            else if (tabId === 'eq') renderEq();
+            else if (tabId === 'about') renderAbout();
+        }
+
+        dynamicContent.scrollTop = 0;
+        toggleScrollToTopButton();
+
+        if (backButton) {
+            tabId === 'radio' ? backButton.hide() : backButton.show();
+        }
+    }
+
+    function handleContentScroll() {
+        toggleScrollToTopButton();
+        if (activeTab !== 'radio') return;
+        const { scrollTop, scrollHeight, clientHeight } = dynamicContent;
+        if (scrollHeight - scrollTop - clientHeight < 200 && !isLoading && hasMore) {
+            fetchStations(false, currentSearchQuery);
+        }
+    }
+
+    function toggleScrollToTopButton() {
+        scrollToTopBtn.classList.toggle('visible', dynamicContent.scrollTop > 300);
+    }
+
+    function init() {
+        loadFavoritesFromStorage();
+        loadEqFromStorage();
+
+        const lastUrl = localStorage.getItem('webradio_last_url');
+        const lastName = localStorage.getItem('webradio_last_name');
+        if (lastUrl) {
+            selectedStation = { url_resolved: lastUrl, name: lastName || 'Станция' };
+            currentStationNameEl.textContent = lastName || 'Станция';
+            audio.src = lastUrl;
+        }
+
+        navRadio.addEventListener('click', () => switchTab('radio'));
+        navFavorites.addEventListener('click', () => switchTab('favorites'));
+        navEq.addEventListener('click', () => switchTab('eq'));
+        navAbout.addEventListener('click', () => switchTab('about'));
+
+        switchTab('radio');
+        dynamicContent.addEventListener('scroll', handleContentScroll);
+
+        let searchTimeout;
+        searchInput.addEventListener('input', e => {
+            const query = e.target.value.trim();
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                currentSearchQuery = query;
+                if (activeTab === 'radio') fetchStations(true, query);
+            }, 500);
+        });
+
+        playBtn.addEventListener('click', togglePlay);
+
+        audio.addEventListener('playing', () => { updatePlayButton(true); setStatus('Играет', 'volume_up'); });
+        audio.addEventListener('pause', () => { updatePlayButton(false); setStatus('Пауза', 'pause_circle'); });
+        audio.addEventListener('waiting', () => { setStatus('Буферизация...', 'sync', true); });
+        audio.addEventListener('error', () => { setStatus('Ошибка потока', 'error'); updatePlayButton(false); });
+
+        scrollToTopBtn.addEventListener('click', () => dynamicContent.scrollTo({ top: 0, behavior: 'smooth' }));
+    }
+
+    function togglePlay() {
+        if (!selectedStation) { setStatus('Выберите станцию', 'info'); return; }
+        if (audioCtx?.state === 'suspended') audioCtx.resume();
+        if (!eqConnected) initAudioContext();
+        if (audio.paused) {
+            if (audio.src !== selectedStation.url_resolved) { audio.src = selectedStation.url_resolved; audio.load(); }
+            audio.play().catch(() => setStatus('Ошибка', 'error'));
+        } else {
+            audio.pause();
+        }
+    }
+
+    init();
+})();
+</script>
+</body>
+</html>
