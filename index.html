@@ -301,25 +301,14 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 13px;
-            font-weight: 800;
-            color: #fff;
-            text-transform: uppercase;
-            letter-spacing: -0.5px;
             border-radius: 12px;
             z-index: 0;
             pointer-events: none;
-            user-select: none;
         }
-        /* Цветовые градиенты для плейсхолдеров */
-        .cover-fallback.color-0 { background: linear-gradient(135deg, #c2185b, #880e4f); }
-        .cover-fallback.color-1 { background: linear-gradient(135deg, #1565c0, #0d47a1); }
-        .cover-fallback.color-2 { background: linear-gradient(135deg, #2e7d32, #1b5e20); }
-        .cover-fallback.color-3 { background: linear-gradient(135deg, #e65100, #bf360c); }
-        .cover-fallback.color-4 { background: linear-gradient(135deg, #4527a0, #311b92); }
-        .cover-fallback.color-5 { background: linear-gradient(135deg, #00695c, #004d40); }
-        .cover-fallback.color-6 { background: linear-gradient(135deg, #558b2f, #33691e); }
-        .cover-fallback.color-7 { background: linear-gradient(135deg, #6a1520, #4a0010); }
+        .station-cover .cover-fallback i {
+            font-size: 28px;
+            color: #c2185b;
+        }
 
         /* Активная анимация — пульсирующий бордер на обложке */
         .station-card.active .station-cover::after {
@@ -412,53 +401,6 @@
             display: flex;
             align-items: center;
             gap: 12px;
-        }
-
-        /* Обложка в плеере */
-        .player-cover {
-            width: 40px;
-            height: 40px;
-            border-radius: 10px;
-            background: #2c2c2c;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-            flex-shrink: 0;
-            position: relative;
-        }
-        .player-cover img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            border-radius: 10px;
-            display: block;
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
-        .player-cover img.loaded {
-            opacity: 1;
-        }
-        .player-cover .cover-fallback {
-            position: absolute;
-            inset: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 11px;
-            font-weight: 800;
-            color: #fff;
-            text-transform: uppercase;
-            border-radius: 10px;
-        }
-        /* Анимация вращения обложки при воспроизведении */
-        .player-cover.playing img,
-        .player-cover.playing .cover-fallback {
-            animation: coverRotate 8s linear infinite;
-        }
-        @keyframes coverRotate {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
         }
 
         .play-btn {
@@ -632,12 +574,6 @@
 
     <!-- ПЛЕЕР -->
     <div class="player-bar" id="playerBar">
-        <div class="player-cover" id="playerCover">
-            <div class="cover-fallback color-0" id="playerCoverFallback">
-                <i class="material-icons" style="font-size:20px;color:rgba(255,255,255,0.7)">radio</i>
-            </div>
-            <img id="playerCoverImg" src="" alt="" style="display:none;">
-        </div>
         <button class="play-btn" id="playBtn">
             <i class="material-icons">play_arrow</i>
         </button>
@@ -719,9 +655,6 @@
     const dynamicContent = document.getElementById('dynamicContent');
     const bottomNav = document.getElementById('bottomNav');
     const scrollToTopBtn = document.getElementById('scrollToTopBtn');
-    const playerCover = document.getElementById('playerCover');
-    const playerCoverImg = document.getElementById('playerCoverImg');
-    const playerCoverFallback = document.getElementById('playerCoverFallback');
 
     const navRadio = document.getElementById('navRadio');
     const navFavorites = document.getElementById('navFavorites');
@@ -742,20 +675,6 @@
     audio.volume = 1.0;
 
     // ========== Цвет плейсхолдера по имени ==========
-    function getColorIndex(name) {
-        if (!name) return 0;
-        let hash = 0;
-        for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) & 0xffffffff;
-        return Math.abs(hash) % 8;
-    }
-
-    function getInitials(name) {
-        if (!name) return '?';
-        const words = name.trim().split(/\s+/);
-        if (words.length === 1) return words[0].substring(0, 2).toUpperCase();
-        return (words[0][0] + words[1][0]).toUpperCase();
-    }
-
     // ========== Telegram Back Button ==========
     const backButton = tg?.BackButton;
     if (backButton) {
@@ -809,42 +728,12 @@
             .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
-    // ========== Обновить обложку в плеере ==========
-    function updatePlayerCover(station) {
-        const colorIdx = getColorIndex(station?.name);
-        const initials = getInitials(station?.name || '?');
-
-        playerCoverFallback.className = `cover-fallback color-${colorIdx}`;
-        playerCoverFallback.textContent = initials;
-        playerCoverFallback.style.fontSize = '13px';
-
-        if (station?.favicon) {
-            playerCoverImg.style.display = 'block';
-            playerCoverImg.className = '';
-            const img = new Image();
-            img.onload = () => {
-                playerCoverImg.src = station.favicon;
-                playerCoverImg.classList.add('loaded');
-            };
-            img.onerror = () => {
-                playerCoverImg.style.display = 'none';
-            };
-            img.src = station.favicon;
-        } else {
-            playerCoverImg.style.display = 'none';
-        }
-    }
-
     // ========== Рендер карточки обложки ==========
     function buildCoverHtml(station) {
-        const colorIdx = getColorIndex(station.name);
-        const initials = escapeHtml(getInitials(station.name || ''));
         const faviconUrl = escapeHtml(station.favicon || '');
-        const urlKey = escapeHtml(station.url_resolved);
-
         return `
-            <div class="station-cover" id="cover-${urlKey.replace(/[^a-zA-Z0-9]/g, '_').substring(0,30)}">
-                <div class="cover-fallback color-${colorIdx}">${initials}</div>
+            <div class="station-cover">
+                <div class="cover-fallback"><i class="material-icons">radio</i></div>
                 ${faviconUrl ? `<img src="${faviconUrl}" alt="" loading="lazy" class="loading"
                     onload="this.classList.remove('loading');this.classList.add('loaded')"
                     onerror="this.style.display='none'">` : ''}
@@ -957,9 +846,6 @@
         selectedStation = { url_resolved: url, name, favicon: favicon || '' };
         currentStationNameEl.textContent = name || 'Неизвестная станция';
 
-        // Обновить обложку в плеере
-        updatePlayerCover(selectedStation);
-
         document.querySelectorAll('.station-card').forEach(card => {
             card.classList.remove('active');
             if (card.dataset.url === url) card.classList.add('active');
@@ -986,9 +872,6 @@
         playBtn.innerHTML = playing
             ? '<i class="material-icons">pause</i>'
             : '<i class="material-icons">play_arrow</i>';
-        // Анимация обложки
-        if (playing) playerCover.classList.add('playing');
-        else playerCover.classList.remove('playing');
     }
 
     async function fetchStations(reset = false, query = '') {
@@ -1133,7 +1016,6 @@
             selectedStation = { url_resolved: lastUrl, name: lastName || 'Станция', favicon: lastFavicon };
             currentStationNameEl.textContent = lastName || 'Станция';
             audio.src = lastUrl;
-            updatePlayerCover(selectedStation);
         }
 
         navRadio.addEventListener('click', () => switchTab('radio'));
