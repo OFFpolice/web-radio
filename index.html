@@ -735,7 +735,7 @@
             <div class="station-cover">
                 <div class="cover-fallback"><i class="material-icons">radio</i></div>
                 ${faviconUrl ? `<img src="${faviconUrl}" alt="" loading="lazy" class="loading"
-                    onload="this.classList.remove('loading');this.classList.add('loaded')"
+                    onload="this.classList.remove('loading');this.classList.add('loaded');this.previousElementSibling.style.display='none'"
                     onerror="this.style.display='none'">` : ''}
             </div>`;
     }
