@@ -27,7 +27,6 @@
             padding: 0;
         }
 
-        /* ========== ЗАГРУЗОЧНЫЙ ЭКРАН ========== */
         #loadingScreen {
             position: fixed;
             inset: 0;
@@ -46,7 +45,6 @@
             pointer-events: none;
         }
 
-        /* Логотип — пульсирующий круг с иконкой */
         .loader-logo {
             position: relative;
             width: 96px;
@@ -112,7 +110,6 @@
             letter-spacing: 0.3px;
         }
 
-        /* Волны-эквалайзер */
         .loader-equalizer {
             display: flex;
             align-items: flex-end;
@@ -138,7 +135,6 @@
             50% { height: var(--h, 20px); }
         }
 
-        /* Прогресс-бар загрузки */
         .loader-progress-wrap {
             width: 200px;
             height: 3px;
@@ -162,7 +158,6 @@
             letter-spacing: 0.5px;
         }
 
-        /* ========== ОСНОВНОЕ ПРИЛОЖЕНИЕ ========== */
         .app {
             max-width: 500px;
             margin: 0 auto;
@@ -245,7 +240,6 @@
             font-size: 20px;
         }
 
-        /* ========== КАРТОЧКА СТАНЦИИ ========== */
         .station-card {
             display: flex;
             align-items: flex-start;
@@ -267,7 +261,6 @@
             border-radius: 16px 8px 8px 16px;
         }
 
-        /* ========== ОБЛОЖКА СТАНЦИИ ========== */
         .station-cover {
             width: 52px;
             height: 52px;
@@ -310,7 +303,6 @@
             color: #c2185b;
         }
 
-        /* Активная анимация — пульсирующий бордер на обложке */
         .station-card.active .station-cover::after {
             content: '';
             position: absolute;
@@ -391,7 +383,6 @@
             color: #9e9e9e;
         }
 
-        /* ========== ПЛЕЕР ========== */
         .player-bar {
             padding: 8px 12px;
             background: #1e1e1e;
@@ -446,7 +437,6 @@
             font-size: 16px;
         }
 
-        /* ========== НИЖНЯЯ НАВИГАЦИЯ ========== */
         .bottom-nav {
             display: flex;
             align-items: center;
@@ -480,7 +470,6 @@
             background: rgba(233, 30, 99, 0.1);
         }
 
-        /* ========== О НАС ========== */
         .about-container {
             padding: 24px 16px;
             text-align: center;
@@ -535,7 +524,6 @@
 </head>
 <body>
 
-<!-- ========== ЗАГРУЗОЧНЫЙ ЭКРАН ========== -->
 <div id="loadingScreen">
     <div class="loader-logo">
         <div class="loader-logo-ring2"></div>
@@ -560,7 +548,6 @@
     <div class="loader-progress-text" id="loaderProgressText">Подключение...</div>
 </div>
 
-<!-- ========== ОСНОВНОЕ ПРИЛОЖЕНИЕ ========== -->
 <div class="app" id="app">
     <header class="app-header" id="appHeader">
         <h1>WebRadioBot</h1>
@@ -572,7 +559,6 @@
 
     <div class="content" id="dynamicContent"></div>
 
-    <!-- ПЛЕЕР -->
     <div class="player-bar" id="playerBar">
         <button class="play-btn" id="playBtn">
             <i class="material-icons">play_arrow</i>
@@ -620,7 +606,6 @@
         tg.lockOrientation();
     }
 
-    // ========== ЗАГРУЗОЧНЫЙ ЭКРАН ==========
     const loadingScreen = document.getElementById('loadingScreen');
     const loaderProgress = document.getElementById('loaderProgress');
     const loaderProgressText = document.getElementById('loaderProgressText');
@@ -639,12 +624,10 @@
         }, 400);
     }
 
-    // Анимация прогресса при загрузке шрифтов/DOM
     setLoadProgress(10, 'Инициализация...');
     setTimeout(() => setLoadProgress(30, 'Загрузка ресурсов...'), 300);
     setTimeout(() => setLoadProgress(55, 'Подключение к серверу...'), 700);
 
-    // ========== ОСНОВНАЯ ЛОГИКА ==========
     const audio = document.getElementById('audioPlayer');
     const playBtn = document.getElementById('playBtn');
     const statusText = document.getElementById('statusText');
@@ -674,8 +657,6 @@
 
     audio.volume = 1.0;
 
-    // ========== Цвет плейсхолдера по имени ==========
-    // ========== Telegram Back Button ==========
     const backButton = tg?.BackButton;
     if (backButton) {
         backButton.onClick(() => {
@@ -683,7 +664,6 @@
         });
     }
 
-    // ========== Избранное ==========
     function loadFavoritesFromStorage() {
         try {
             const stored = localStorage.getItem('webradio_favorites');
@@ -728,7 +708,6 @@
             .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
-    // ========== Рендер карточки обложки ==========
     function buildCoverHtml(station) {
         const faviconUrl = escapeHtml(station.favicon || '');
         return `
@@ -740,7 +719,6 @@
             </div>`;
     }
 
-    // ========== Рендеринг списков ==========
     function renderRadioList() {
         if (!stations.length && !isLoading) {
             dynamicContent.innerHTML = `<div class="loading-placeholder"><i class="material-icons">search_off</i> Ничего не найдено</div>`;
@@ -837,7 +815,7 @@
                 <i class="material-icons about-icon">radio</i>
                 <div class="about-title">WebRadioBot</div>
                 <div class="about-text">Слушайте тысячи радиостанций со всего мира. Добавляйте любимые в избранное.</div>
-                <div class="about-text" style="font-size:13px; opacity:0.7;">Версия: 0.0.0.0.4 · Telegram Mini App</div>
+                <div class="about-text" style="font-size:13px; opacity:0.7;">Version: 0.0.5 · Telegram Mini App</div>
             </div>`;
     }
 
@@ -938,7 +916,6 @@
             setStatus(`Загружено: ${stations.length}`, 'check_circle');
             if (!hasMore && stations.length) setStatus('Все станции загружены', 'done_all');
 
-            // Скрыть загрузочный экран после первой успешной загрузки
             if (reset) {
                 setLoadProgress(100, 'Готово!');
                 hideLoadingScreen();
